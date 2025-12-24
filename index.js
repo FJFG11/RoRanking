@@ -8,8 +8,7 @@ const {
     GatewayIntentBits,
     SlashCommandBuilder,
     REST,
-    Routes,
-    PermissionFlagsBits
+    Routes
 } = require("discord.js");
 
 const fetch = require("node-fetch");
@@ -23,9 +22,9 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const PORT = 3000;
 
-/* 🔒 ALLOWED DISCORD ROLES */
-const ALLOWED_ROLE_IDS = [
-    "1453374542956331071",
+/* 🔒 ROLE LOCK FOR /rank ONLY */
+const RANK_ALLOWED_ROLE_IDS = [
+    "1453374542956331071"
 ];
 
 /* ================= EXPRESS ================= */
@@ -103,18 +102,16 @@ const rankCommand = new SlashCommandBuilder()
         o.setName("rank")
             .setDescription("Group rank ID")
             .setRequired(true)
-    )
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
+    );
 
 const shoutCommand = new SlashCommandBuilder()
     .setName("shout")
-    .setDescription("Post a Roblox group shout")
+    .setDescription("Create community announcements")
     .addStringOption(o =>
         o.setName("message")
-            .setDescription("Shout message")
+            .setDescription("Announcement message")
             .setRequired(true)
-    )
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
+    );
 
 /* ---------- REGISTER COMMANDS ---------- */
 
@@ -137,16 +134,18 @@ const rest = new REST({ version: "10" }).setToken(DISCORD_TOKEN);
 client.on("interactionCreate", async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
-    /* 🔒 GLOBAL ROLE LOCK */
-    const hasPermission = interaction.member.roles.cache.some(role =>
-        ALLOWED_ROLE_IDS.includes(role.id)
-    );
+    /* 🔒 ROLE CHECK ONLY FOR /rank */
+    if (interaction.commandName === "rank") {
+        const hasPermission = interaction.member.roles.cache.some(role =>
+            RANK_ALLOWED_ROLE_IDS.includes(role.id)
+        );
 
-    if (!hasPermission) {
-        return interaction.reply({
-            content: "❌ You do not have permission to use this bot.",
-            ephemeral: true
-        });
+        if (!hasPermission) {
+            return interaction.reply({
+                content: "❌ You do not have permission to use /rank.",
+                ephemeral: true
+            });
+        }
     }
 
     /* ---------- /rank ---------- */
@@ -195,7 +194,7 @@ client.on("interactionCreate", async interaction => {
 
             if (!res.ok) throw new Error(await res.text());
 
-            await interaction.editReply("📢 Group shout posted!");
+            await interaction.editReply("📢 Community announcement posted!");
         } catch (err) {
             await interaction.editReply(`❌ Error: ${err.message}`);
         }
